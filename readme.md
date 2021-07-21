@@ -345,7 +345,10 @@ readme.md
 
 ## Описание работы стенда
 
- 1. Запускаем vagrant, после поднятия машин запускам плэйбук **playbooks/borg-backup.yml**.  
+ 1. Запускаем vagrant, после поднятия машин запускам плэйбук **playbooks/borg-backup.yml**  
+              
+              ansible-playbook playbooks/borg-backup.yml  
+              
  2. Проверяем создание бэкапов. На клиенте запускаем:
        
         # borg list otus-bkps:/var/backup/otus-bkpc-etc  
@@ -387,8 +390,8 @@ readme.md
  3. Запускаем восстановление бэкапа с сервера, перейдя предварительно в /.  
  Получаем ошибку о недоступности borg на сервере.  
  
-     #borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc  
-    Connection closed by remote host. Is borg working on the server?  
+       #borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc  
+       Connection closed by remote host. Is borg working on the server?  
 
 При этом клиент и сервер не могут соединиться по ssh.  
 
@@ -415,7 +418,7 @@ readme.md
   
  Соединение успешно установилось. Выходим, попадаем снова на otus-bkpc.  
   
- 8. Теперь восснавливаем папку /etc, находясь в /  
+ 8. Теперь восстанавливаем папку /etc, находясь в /  
   
         #borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc   
   
