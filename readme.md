@@ -12,6 +12,8 @@ readme.md
 
 Резервное копирование производим через borgbackup. Для создания ssh соединения между клиентом  
 (otus-bkpc) и сервером (otus-bkps) используются заранее сгенерированные ключи (для упрощения).  
+Также для упрощения работа производится от пользователя root на клиенте и сервере.  
+
 
 
 Далее идет описание плэйбука borg-backup.yml, который настраивает поднятые вагрантом машины.  
@@ -124,11 +126,11 @@ readme.md
       
 #### Кофигурируем клиентскую машину (otus-bkpc)
       
-- name: CONFIG BACKUP CLIENT  
-  hosts: otus-bkpc
-  become: true
+    - name: CONFIG BACKUP CLIENT  
+      hosts: otus-bkpc
+      become: true
     
-  tasks:
+      tasks:
 
 
 Добавляем в /etc/hosts серверную машину  
@@ -255,11 +257,11 @@ readme.md
 #### Дополнительно конфигурируем сервер        
         
         
-- name: CONFIG 2 BACKUP SERVER  
-  hosts: otus-bkps
-  become: true
+    - name: CONFIG 2 BACKUP SERVER  
+      hosts: otus-bkps
+      become: true
     
-  tasks:
+      tasks:
 
 Копируем ключевой файл репозитория на сервер в /root/.congig/borg/keys, чтобы работать с репозиторием на сервере  
   
@@ -274,105 +276,106 @@ readme.md
 
 #### data/client/script-backup.sh
 
-#!/bin/bash  
+    #!/bin/bash  
   
 #Задаем имя сервера бэкапов  
   
-BORG_SERVER=otus-bkps  
+    BORG_SERVER=otus-bkps  
   
 #Задаем тип бэкапа, в нашем случае будет etc  
   
-TYPE_OF_BACKUP=etc  
+    TYPE_OF_BACKUP=etc  
   
 #Задаем путь к репозиторию  
   
-REPOSITORY="${BORG_SERVER}:/var/backup/$(hostname)-${TYPE_OF_BACKUP}"  
+    REPOSITORY="${BORG_SERVER}:/var/backup/$(hostname)-${TYPE_OF_BACKUP}"  
   
 #Пишем команду для создания бэкапа  
   
-borg create --list -v --stats \  
- $REPOSITORY::"etc-{now:%Y-%m-%d-%H-%M}" \  
- /etc  
+    borg create --list -v --stats \  
+    $REPOSITORY::"etc-{now:%Y-%m-%d-%H-%M}" \  
+    /etc  
   
 #Задаем интервалы хранения бэкапов  
   
-borg prune -v --list \  
-   --keep-within=7d \  
-   --keep-weekly=4 \  
-   $REPOSITORY  
+    borg prune -v --list \  
+       --keep-within=7d \  
+       --keep-weekly=4 \  
+    $REPOSITORY  
     
     
 #### data/client/borgback.service
 
-[Unit]  
-Description=BorgBackup Script  
+    [Unit]  
+    Description=BorgBackup Script  
   
-[Service]  
-ExecStart=/bin/bash /root/script-backup.sh  
-StandardOutput=append:/var/log/borgback  
-StandardError=append:/var/log/borgback  
+    [Service]  
+    ExecStart=/bin/bash /root/script-backup.sh  
+    StandardOutput=append:/var/log/borgback  
+    StandardError=append:/var/log/borgback  
   
-[Install]  
-WantedBy=multi-user.target  
+    [Install]  
+    WantedBy=multi-user.target  
 
 #### data/client/borgback.timer
 
-[Unit]  
-Description=Timer For BorgBack service  
+    [Unit]  
+    Description=Timer For BorgBack service  
   
-[Timer]  
-OnUnitActiveSec=5m  
+    [Timer]  
+    OnUnitActiveSec=5m  
   
-[Install]  
-WantedBy=multi-user.target  
+    [Install]  
+    WantedBy=multi-user.target  
 
 #### data/server/var-backup.mount
 
-[Unit]  
-Description=var-backup mount  
+    [Unit]  
+    Description=var-backup mount  
   
-[Mount]  
-What=/dev/sdb  
-Where=/var/backup  
-Type=ext4  
-Options=defaults  
+    [Mount]  
+    What=/dev/sdb  
+    Where=/var/backup  
+    Type=ext4  
+    Options=defaults  
   
-[Install]  
-WantedBy=multi-user.target  
+    [Install]  
+    WantedBy=multi-user.target  
 
 
 ## Описание работы стенда
 
  1. Запускаем vagrant, после поднятия машин запускам плэйбук **playbooks/borg-backup.yml**.  
  2. Проверяем создание бэкапов. На клиенте запускаем:
-#borg list otus-bkps:/var/backup/otus-bkpc-etc  
+       
+        # borg list otus-bkps:/var/backup/otus-bkpc-etc  
  
-etc-2021-07-20-18-05                 Tue, 2021-07-20 18:05:32 [ccc5bae3a160363d40d1bc8d4787bec7e15f275805cfa02cd4e4d33280317e10]  
-etc-2021-07-20-18-10                 Tue, 2021-07-20 18:10:32 [ed9f3d24b56e3bc928ec8c6ef5336ad67f2ecd4ffa827cbd301bbc4a363eb091]  
-etc-2021-07-20-18-16                 Tue, 2021-07-20 18:16:32 [a1f2d61790334f836cd7d78acd92d54067e173cd8a3dbf98d15ef75244793a0c]  
-etc-2021-07-20-18-22                 Tue, 2021-07-20 18:22:05 [45b733f98dad7e691a24ec68fa20b1fa33cf504f579e99c8c5b4e67b2b1a4605]  
-etc-2021-07-20-18-27                 Tue, 2021-07-20 18:27:32 [571c1f5b6b4d6466fa174c711746d52d8342d0f05585ca5d22d72a8e1cd2b22b]  
+        etc-2021-07-20-18-05                 Tue, 2021-07-20 18:05:32 [ccc5bae3a160363d40d1bc8d4787bec7e15f275805cfa02cd4e4d33280317e10]  
+        etc-2021-07-20-18-10                 Tue, 2021-07-20 18:10:32 [ed9f3d24b56e3bc928ec8c6ef5336ad67f2ecd4ffa827cbd301bbc4a363eb091]  
+        etc-2021-07-20-18-16                 Tue, 2021-07-20 18:16:32 [a1f2d61790334f836cd7d78acd92d54067e173cd8a3dbf98d15ef75244793a0c]  
+        etc-2021-07-20-18-22                 Tue, 2021-07-20 18:22:05 [45b733f98dad7e691a24ec68fa20b1fa33cf504f579e99c8c5b4e67b2b1a4605]  
+        etc-2021-07-20-18-27                 Tue, 2021-07-20 18:27:32 [571c1f5b6b4d6466fa174c711746d52d8342d0f05585ca5d22d72a8e1cd2b22b]  
    
    
  3. Смотрим логи бэкапов:  
  
-#cat/var/log/borgback   
+        #cat/var/log/borgback   
 
-------------------------------------------------------------------------------  
-Archive name: etc-2021-07-20-18-27  
-Archive fingerprint: 571c1f5b6b4d6466fa174c711746d52d8342d0f05585ca5d22d72a8e1cd2b22b  
-Time (start): Tue, 2021-07-20 18:27:32  
-Time (end):   Tue, 2021-07-20 18:27:32  
-Duration: 0.46 seconds  
-Number of files: 423  
-Utilization of max. archive size: 0%  
-------------------------------------------------------------------------------    
-                       Original size      Compressed size    Deduplicated size    
-This archive:               21.63 MB              8.22 MB                508 B  
-All archives:              908.95 MB            345.44 MB              8.58 MB
+        ------------------------------------------------------------------------------  
+        Archive name: etc-2021-07-20-18-27  
+        Archive fingerprint: 571c1f5b6b4d6466fa174c711746d52d8342d0f05585ca5d22d72a8e1cd2b22b  
+        Time (start): Tue, 2021-07-20 18:27:32  
+        Time (end):   Tue, 2021-07-20 18:27:32  
+        Duration: 0.46 seconds  
+        Number of files: 423  
+        Utilization of max. archive size: 0%  
+        ------------------------------------------------------------------------------    
+                                     Original size      Compressed size    Deduplicated size    
+        This archive:               21.63 MB              8.22 MB                508 B  
+        All archives:              908.95 MB            345.44 MB              8.58 MB
   
-                       Unique chunks         Total chunks  
-Chunk index:                     460                17495  
+                                Unique chunks         Total chunks  
+        Chunk index:                     460                17495  
    
 
 Бэкапы создаются с указанным нами интервалом, логи пишутся.  
@@ -384,45 +387,45 @@ Chunk index:                     460                17495
  3. Запускаем восстановление бэкапа с сервера, перейдя предварительно в /.  
  Получаем ошибку о недоступности borg на сервере.  
  
-borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc  
-Connection closed by remote host. Is borg working on the server?  
+     #borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc  
+    Connection closed by remote host. Is borg working on the server?  
 
 При этом клиент и сервер не могут соединиться по ssh.  
 
  4. Восстанавливаем папку etc на сервере:
  
-  #borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc
+        #borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc
   
  5. Копируем ее в папку /root/backup, которая является общей для обоих виртуальных машин.  
  
- #cp ./etc ./backup/etc  
+        #cp ./etc ./backup/etc  
  
  6. На клиенте создаем папку /etc   
  
- #mkdir /etc   
+        #mkdir /etc   
  
   и копируем в нее из папки /root/backup необходимые для восстановления работы ssh файлы:  
   
-  #cp -r /root/backup/etc/ssh /root/backup/etc/passwd /root/backup/etc/shadow /root/backup/etc/hosts /etc  
+     #cp -r /root/backup/etc/ssh /root/backup/etc/passwd /root/backup/etc/shadow /root/backup/etc/hosts /etc  
   
  7. Проверяем ssh соединение с сервером:  
  
- #ssh otus-bkps  
-Last login: Tue Jul 20 16:40:52 2021 from 192.168.100.61  
+        #ssh otus-bkps  
+        Last login: Tue Jul 20 16:40:52 2021 from 192.168.100.61  
   
  Соединение успешно установилось. Выходим, попадаем снова на otus-bkpc.  
   
  8. Теперь восснавливаем папку /etc, находясь в /  
   
- borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc   
+        #borg extract otus-bkps:/var/backup/otus-bkpc-etc::etc-2021-07-21-09-00 etc   
   
  9. После восстановления проверяем, запустился ли снова процесс создания бэкапов.  
   
- borg list otus-bkps:/var/backup/otus-bkpc-etc  
+        #borg list otus-bkps:/var/backup/otus-bkpc-etc  
   
-etc-2021-07-21-09-00                 Wed, 2021-07-21 09:00:04 [3a4b1881a960c2e68a7851862a3475cf067d3c423637e9055f347441c038a692]  
-etc-2021-07-21-09-10                 Wed, 2021-07-21 09:10:42 [dd2fa87c1df36a019b6ddaa9e1dab062f5245f4a8a6c359a8c16b15aa0503c6c]  
-etc-2021-07-21-09-15                 Wed, 2021-07-21 09:15:42 [f1fdf058ebb8da89bd5a9a594e1652397f43ea1c3b7d919dfa19a4c06ecfcad9]  
+        etc-2021-07-21-09-00                 Wed, 2021-07-21 09:00:04 [3a4b1881a960c2e68a7851862a3475cf067d3c423637e9055f347441c038a692]  
+        etc-2021-07-21-09-10                 Wed, 2021-07-21 09:10:42 [dd2fa87c1df36a019b6ddaa9e1dab062f5245f4a8a6c359a8c16b15aa0503c6c]  
+        etc-2021-07-21-09-15                 Wed, 2021-07-21 09:15:42 [f1fdf058ebb8da89bd5a9a594e1652397f43ea1c3b7d919dfa19a4c06ecfcad9]  
   
 Бэкапы создаются, папка /etc на клиенте восстановлена.
  
