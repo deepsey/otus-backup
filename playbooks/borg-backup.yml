@@ -1,0 +1,205 @@
+---
+- name: CONFIG BACKUP SERVER  
+  hosts: otus-bkps
+  become: true
+    
+  tasks:
+  
+    - name: SERVER | CHANGE HOSTS FILE
+      lineinfile: 
+        path: /etc/hosts
+        line: 192.168.100.61 otus-bkpc
+        state: present
+        
+    - name: SERVER | CREATE DIR /root/.ssh    
+      file:
+        path: /root/.ssh
+        state: directory
+       
+    - name: SERVER | COPY PRIVATE SSH KEY
+      copy:
+        src: ../data/server/id_rsa
+        dest: /root/.ssh
+        mode: '600'
+      
+    - name: SERVER | COPY PUB SSH KEY 
+      copy:
+        src: ../data/server/id_rsa.pub
+        dest: /root/.ssh
+        mode: '644'
+    
+    - name: SERVER | COPY PRIVATE SERVER KEY 
+      copy:
+        src: ../data/server/ssh_host_rsa_key
+        dest: /etc/ssh
+        mode: '640'
+        
+    - name: SERVER | COPY PUBLIC SERVER KEY   
+      copy:
+        src: ../data/server/ssh_host_rsa_key.pub
+        dest: /etc/ssh
+        mode: '644'
+        
+    - name: SERVER | CREATE /root/.ssh/authorized_keys  
+      file:
+        path: /root/.ssh/authorized_keys
+        state: touch
+        
+    - name: SERVER | COPY THE KEYS TO FILES 
+      shell: cat /vagrant/data/client/id_rsa.pub > /root/.ssh/authorized_keys ; cat /vagrant/data/known_hosts_s > /root/.ssh/known_hosts
+      
+    - name: SERVER | INSTALL BORGBACKUP
+      yum:
+        name: borgbackup
+        state: present
+        
+    - name: SERVER | CREATE DIR /var/backup   
+      file:
+        path: /var/backup
+        state: directory 
+        
+    - name: SERVER | MAKE FS ON /dev/sdb
+      filesystem:
+        dev: /dev/sdb
+        fstype: ext4
+        
+    - name: SERVER | COPY var-backup.mount
+      copy:
+        src: ../data/server/var-backup.mount
+        dest: /etc/systemd/system/
+        
+    - name: SERVER | DAEMON RELOAD
+      systemd:
+        daemon-reload: yes
+        
+    - name: SERVER | ENABLE var-backup.mount 
+      systemd:
+        name: var-backup.mount
+        enabled: yes
+        
+    - name: SERVER | START var-backup.mount 
+      systemd:
+        name: var-backup.mount
+        state: started    
+      
+      
+
+      
+- name: CONFIG BACKUP CLIENT  
+  hosts: otus-bkpc
+  become: true
+    
+  tasks:
+  
+    - name: CLIENT | CHANGE HOSTS FILE
+      lineinfile: 
+        path: /etc/hosts
+        line: 192.168.100.60 otus-bkps
+        state: present
+        
+    - name: CLIENT | CREATE DIR /root/.ssh    
+      file:
+        path: /root/.ssh
+        state: directory
+       
+    - name: CLIENT | COPY PRIVATE SSH KEY
+      copy:
+        src: ../data/client/id_rsa
+        dest: /root/.ssh
+        mode: '600'
+      
+    - name: CLIENT | COPY PUB SSH KEY 
+      copy:
+        src: ../data/client/id_rsa.pub
+        dest: /root/.ssh
+        mode: '644'
+    
+    - name: CLIENT | COPY PRIVATE SERVER KEY  
+      copy:
+        src: ../data/client/ssh_host_rsa_key
+        dest: /etc/ssh
+        mode: '640'
+        
+    - name: CLIENT | COPY PUBLIC SERVER KEY  
+      copy:
+        src: ../data/client/ssh_host_rsa_key.pub
+        dest: /etc/ssh
+        mode: '644'
+        
+    - name: CLIENT | CREATE /root/.ssh/authorized_keys  
+      file:
+        path: /root/.ssh/authorized_keys
+        state: touch
+        
+    - name: CLIENT | COPY THE KEYS TO FILES 
+      shell: cat /vagrant/data/server/id_rsa.pub > /root/.ssh/authorized_keys ; cat /vagrant/data/known_hosts_c > /root/.ssh/known_hosts      
+        
+    - name: CLIENT | INSTALL BORGBACKUP
+      yum:
+        name: borgbackup
+        state: present
+        
+    - name: CLIENT | COPY script-backup.sh
+      copy:
+        src: ../data/client/script-backup.sh
+        dest: /root
+        
+    - name: CLIENT | 
+      shell: BORG_NEW_PASSPHRASE='' borg init --encryption=keyfile otus-bkps:/var/backup/otus-bkpc-etc
+      
+    - name: CLIENT | GET BORG REPOSITORY KEY
+      fetch: 
+        src: /root/.config/borg/keys/otus_bkps__var_backup_otus_bkpc_etc
+        dest: ../
+        
+    - name: CLIENT | COPY borgback.service
+      copy:
+        src: ../data/client/borgback.service
+        dest: /etc/systemd/system/ 
+        
+    - name: CLIENT | COPY borgback.timer
+      copy:
+        src: ../data/client/borgback.timer
+        dest: /etc/systemd/system/  
+        
+    - name: CLIENT | CREATE /var/log/borgback  
+      file:
+        path: /var/log/borgback
+        state: touch 
+        
+    - name: CLIENT | DAEMON RELOAD
+      systemd:
+        daemon-reload: yes 
+        
+    - name: CLIENT | ENABLE borgback.service 
+      systemd:
+        name: borgback.service
+        enabled: yes
+        
+    - name: CLIENT | START borgback.service 
+      systemd:
+        name: borgback.service
+        state: started 
+        
+    - name: CLIENT | ENABLE borgback.timer 
+      systemd:
+        name: borgback.timer
+        enabled: yes
+        
+    - name: CLIENT | START borgback.timer 
+      systemd:
+        name: borgback.timer
+        state: started 
+        
+- name: CONFIG 2 BACKUP SERVER  
+  hosts: otus-bkps
+  become: true
+    
+  tasks:
+  
+    - name: SERVER | COPY BORG REPOSITORY KEY FROM CLIENT
+      copy: 
+        src: ../otus-bkpc/root/.config/borg/keys/otus_bkps__var_backup_otus_bkpc_etc
+        dest: /root/.config/borg/keys/
+      tags:
+        - last-step
