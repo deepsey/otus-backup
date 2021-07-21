@@ -10,8 +10,8 @@ Vagrantfile
 readme.md  
 
 
-Резервное копирование производим через borgbackup. Для создания ssh соединения между клиентом (otus-bkpc)  
-и сервером (otus-bkps) используются заранее сгенерированные ключи (для упрощения).  
+Резервное копирование производим через borgbackup. Для создания ssh соединения между клиентом  
+(otus-bkpc) и сервером (otus-bkps) используются заранее сгенерированные ключи (для упрощения).  
 
 
 Далее идет описание плэйбука borg-backup.yml, который настраивает поднятые вагрантом машины.  
@@ -19,11 +19,11 @@ readme.md
 
 #### Кофигурируем сервер
 
-- name: CONFIG BACKUP SERVER  
-  hosts: otus-bkps  
-  become: true  
+    - name: CONFIG BACKUP SERVER  
+      hosts: otus-bkps  
+      become: true  
     
-  tasks:  
+      tasks:  
   
 
 
