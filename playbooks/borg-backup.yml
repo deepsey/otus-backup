@@ -144,7 +144,7 @@
         src: ../data/client/script-backup.sh
         dest: /root
         
-    - name: CLIENT | 
+    - name: CLIENT | REPOSITORY INITIALIZATION 
       shell: BORG_NEW_PASSPHRASE='' borg init --encryption=keyfile otus-bkps:/var/backup/otus-bkpc-etc
       
     - name: CLIENT | GET BORG REPOSITORY KEY
