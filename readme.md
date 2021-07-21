@@ -198,7 +198,7 @@ readme.md
         
 Инициализируем репозиторий для бэкапов с защитой по ключу  
         
-    - name: CLIENT | 
+    - name: CLIENT | REPOSITORY INITIALIZATION
       shell: BORG_NEW_PASSPHRASE='' borg init --encryption=keyfile otus-bkps:/var/backup/otus-bkpc-etc
       
 Копируем созданный во время инициализации ключевой файл на хостовую машину для копирования его на сервер.  
